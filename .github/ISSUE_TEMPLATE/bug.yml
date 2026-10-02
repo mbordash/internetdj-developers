@@ -1,0 +1,18 @@
+name: Something isn't working
+description: An embed, endpoint, or the arrangement format doesn't behave as documented.
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Embeds and oEmbed, Arrangement format, Docs, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: Include the URL or request you sent and what came back.
+    validations:
+      required: true

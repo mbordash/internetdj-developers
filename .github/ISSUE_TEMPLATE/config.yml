@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/mbordash/internetdj-developers/security/advisories/new
+    about: Please report security problems privately, not as an issue.
+  - name: Help with the InternetDJ site
+    url: https://internetdj.co/forum
+    about: Questions about using InternetDJ itself go to the forum.

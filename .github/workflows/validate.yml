@@ -1,0 +1,34 @@
+name: Validate examples
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  arrangements:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check every example against the arrangement schema
+        run: |
+          npm install --no-save ajv@8
+          node -e '
+            const Ajv = require("ajv/dist/2020");
+            const fs = require("fs");
+            const dir = "arrangement-format/examples";
+            const validate = new Ajv({ allErrors: true, strict: false })
+              .compile(require("./arrangement-format/arrangement.schema.json"));
+            let failed = false;
+            for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+              const ok = validate(JSON.parse(fs.readFileSync(`${dir}/${file}`, "utf8")));
+              console.log(`${ok ? "ok  " : "FAIL"} ${file}`);
+              if (!ok) { failed = true; console.log(validate.errors.slice(0, 10)); }
+            }
+            process.exit(failed ? 1 : 0);
+          '

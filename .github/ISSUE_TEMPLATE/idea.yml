@@ -1,0 +1,15 @@
+name: Idea or request
+description: Something you'd like to build on InternetDJ, or feedback on a draft.
+labels: [idea]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to build?
+      description: The goal helps more than a specific endpoint. Tell us what it's for.
+    validations:
+      required: true
+  - type: textarea
+    id: need
+    attributes:
+      label: What would you need from InternetDJ?

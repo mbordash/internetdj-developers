@@ -1,0 +1,1155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mbordash/internetdj-developers/main/arrangement-format/arrangement.schema.json",
+  "title": "InternetDJ arrangement",
+  "description": "A whole multitrack project written as data: tempo, loop, tracks with MIDI notes or audio clips, mix and effects. Draft 0.1, may change before the write API ships. Times are in timeline units: one unit is one second at 120 BPM, so a beat is 0.5 and a 4/4 bar is 2 at every tempo.",
+  "type": "object",
+  "required": [
+    "title",
+    "bpm",
+    "tracks"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "description": "The version of this format the file was written against.",
+      "const": "0.1"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "bpm": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 240
+    },
+    "swing": {
+      "$ref": "#/$defs/swingAmount",
+      "description": "Project swing, MPC style: 50 is straight, 75 is the most. Notes are written straight; the editor delays the off-steps as it plays."
+    },
+    "swingGrid": {
+      "enum": [
+        8,
+        16
+      ],
+      "default": 16,
+      "description": "Which steps swing: 16ths or 8ths."
+    },
+    "loop": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/time"
+        },
+        "end": {
+          "$ref": "#/$defs/time"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "master": {
+      "$ref": "#/$defs/master"
+    },
+    "returns": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/return"
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/track"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "time": {
+      "type": "number",
+      "minimum": 0
+    },
+    "unit": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "pan": {
+      "type": "number",
+      "minimum": -1,
+      "maximum": 1
+    },
+    "swingAmount": {
+      "type": "integer",
+      "minimum": 50,
+      "maximum": 75
+    },
+    "noteName": {
+      "type": "string",
+      "pattern": "^[A-G]#?\\d$",
+      "description": "Scientific pitch with sharps only, e.g. C4, F#2, A#3. Write B-flat as A#."
+    },
+    "drumLane": {
+      "enum": [
+        "C2",
+        "D2",
+        "E2",
+        "F#2",
+        "A#2",
+        "A2",
+        "B2",
+        "C3",
+        "C#3",
+        "D#3"
+      ],
+      "description": "C2 kick, D2 snare, E2 clap, F#2 closed hat, A#2 open hat, A2 low tom, B2 mid tom, C3 high tom, C#3 crash, D#3 ride."
+    },
+    "track": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the arrangement; a sidechain finds its source by this name."
+        },
+        "type": {
+          "enum": [
+            "midi",
+            "audio"
+          ]
+        },
+        "volume": {
+          "$ref": "#/$defs/unit"
+        },
+        "pan": {
+          "$ref": "#/$defs/pan"
+        },
+        "swing": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/swingAmount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "This track's own swing; null or absent follows the project."
+        },
+        "effects": {
+          "$ref": "#/$defs/effects"
+        },
+        "automation": {
+          "$ref": "#/$defs/automation"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "midi"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": true,
+              "type": true,
+              "volume": true,
+              "pan": true,
+              "swing": true,
+              "effects": true,
+              "automation": true,
+              "instrument": {
+                "enum": [
+                  "synth",
+                  "amsynth",
+                  "fmsynth",
+                  "metalsynth",
+                  "duosynth",
+                  "membranesynth",
+                  "drumsampler",
+                  "sampler"
+                ],
+                "default": "synth"
+              },
+              "polyphonic": {
+                "type": "boolean",
+                "default": false
+              },
+              "synth": {
+                "$ref": "#/$defs/synth"
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/note"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "audio"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "name": true,
+              "type": true,
+              "volume": true,
+              "pan": true,
+              "swing": true,
+              "effects": true,
+              "automation": true,
+              "clips": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clip"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    "note": {
+      "type": "object",
+      "required": [
+        "note",
+        "start_time",
+        "duration"
+      ],
+      "properties": {
+        "note": {
+          "$ref": "#/$defs/noteName"
+        },
+        "start_time": {
+          "$ref": "#/$defs/time"
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "velocity": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "clip": {
+      "type": "object",
+      "required": [
+        "start_time"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "sample_url"
+          ]
+        },
+        {
+          "required": [
+            "sample_name"
+          ]
+        },
+        {
+          "required": [
+            "sample_id"
+          ]
+        }
+      ],
+      "properties": {
+        "start_time": {
+          "$ref": "#/$defs/time"
+        },
+        "sample_url": {
+          "type": "string",
+          "pattern": "^https?://",
+          "description": "Fetched and added to your sample library if it is not there already."
+        },
+        "sample_name": {
+          "type": "string",
+          "description": "A sample already in your library, matched by name."
+        },
+        "sample_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A library id. Ids differ between accounts, so prefer a URL or name in a shared file."
+        },
+        "trim_start": {
+          "$ref": "#/$defs/time"
+        },
+        "trim_end": {
+          "$ref": "#/$defs/time"
+        },
+        "fade_in": {
+          "$ref": "#/$defs/time"
+        },
+        "fade_out": {
+          "$ref": "#/$defs/time"
+        },
+        "volume": {
+          "$ref": "#/$defs/unit"
+        }
+      },
+      "additionalProperties": false
+    },
+    "synth": {
+      "type": "object",
+      "description": "Instrument settings. The ranges below are the editor's knobs. Other keys (filter, lfo and instrument-specific settings) are accepted and passed through; they are documented as the format stabilizes.",
+      "properties": {
+        "oscillator": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "examples": [
+                "sine",
+                "triangle",
+                "square",
+                "sawtooth",
+                "fatsawtooth",
+                "fattriangle"
+              ]
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "spread": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "envelope": {
+          "type": "object",
+          "properties": {
+            "attack": {
+              "type": "number",
+              "minimum": 0.001,
+              "maximum": 1
+            },
+            "decay": {
+              "type": "number",
+              "minimum": 0.001,
+              "maximum": 1
+            },
+            "sustain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "release": {
+              "type": "number",
+              "minimum": 0.001,
+              "maximum": 2
+            }
+          }
+        },
+        "synthParams": {
+          "type": "object",
+          "properties": {
+            "harmonicity": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 5
+            },
+            "modulationIndex": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "vibratoRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "detune": {
+              "type": "number",
+              "minimum": -100,
+              "maximum": 100
+            },
+            "modulationEnvelope": {
+              "type": "object",
+              "properties": {
+                "attack": {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "maximum": 1
+                },
+                "decay": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "sustain": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "release": {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "maximum": 2
+                }
+              }
+            }
+          }
+        },
+        "voice0": {
+          "type": "object",
+          "properties": {
+            "detune": {
+              "type": "number",
+              "minimum": -50,
+              "maximum": 50
+            }
+          }
+        },
+        "drum_kit": {
+          "type": "object",
+          "description": "For drumsampler tracks: which bundled hit plays on each lane, by name (see the README for the list).",
+          "propertyNames": {
+            "$ref": "#/$defs/drumLane"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "pads": {
+          "type": "object",
+          "description": "For drumsampler tracks: per-lane pitch, length and choke, or a sample from your library.",
+          "propertyNames": {
+            "$ref": "#/$defs/drumLane"
+          },
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "description": "Either the ordered chain (preferred) or the older one-of-each keys, plus an optional sidechain and sends.",
+      "properties": {
+        "chain": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/effectModule"
+          }
+        },
+        "sidechain": {
+          "$ref": "#/$defs/sidechain"
+        },
+        "sends": {
+          "type": "object",
+          "description": "Return id to send level.",
+          "maxProperties": 4,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]{0,19}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "reverb": {
+          "$ref": "#/$defs/params/reverb"
+        },
+        "delay": {
+          "$ref": "#/$defs/params/delay"
+        },
+        "distortion": {
+          "$ref": "#/$defs/params/distortion"
+        },
+        "eq": {
+          "$ref": "#/$defs/params/eq"
+        },
+        "compressor": {
+          "$ref": "#/$defs/params/compressor"
+        },
+        "autofilter": {
+          "$ref": "#/$defs/params/autofilter"
+        },
+        "chorus": {
+          "$ref": "#/$defs/params/chorus"
+        },
+        "phaser": {
+          "$ref": "#/$defs/params/phaser"
+        },
+        "bitcrusher": {
+          "$ref": "#/$defs/params/bitcrusher"
+        },
+        "gate": {
+          "$ref": "#/$defs/params/gate"
+        },
+        "width": {
+          "$ref": "#/$defs/params/width"
+        }
+      },
+      "additionalProperties": false
+    },
+    "effectModule": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^fx-[a-z0-9-]{1,24}$"
+        },
+        "type": {
+          "enum": [
+            "reverb",
+            "delay",
+            "distortion",
+            "eq",
+            "compressor",
+            "autofilter",
+            "chorus",
+            "phaser",
+            "bitcrusher",
+            "gate",
+            "width"
+          ]
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reverb"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/reverb"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "delay"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/delay"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "distortion"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/distortion"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "eq"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/eq"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "compressor"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/compressor"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "autofilter"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/autofilter"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "chorus"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/chorus"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "phaser"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/phaser"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bitcrusher"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/bitcrusher"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "gate"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/gate"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "width"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/params/width"
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "params": {
+      "reverb": {
+        "type": "object",
+        "properties": {
+          "decay": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 10
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "delay": {
+        "type": "object",
+        "properties": {
+          "delayTime": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "feedback": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.9
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "distortion": {
+        "type": "object",
+        "properties": {
+          "distortion": {
+            "$ref": "#/$defs/unit"
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "eq": {
+        "$ref": "#/$defs/eqBands",
+        "unevaluatedProperties": false
+      },
+      "compressor": {
+        "type": "object",
+        "properties": {
+          "threshold": {
+            "type": "number",
+            "minimum": -60,
+            "maximum": 0
+          },
+          "ratio": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "attack": {
+            "type": "number",
+            "minimum": 0.001,
+            "maximum": 0.3
+          },
+          "release": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 1
+          },
+          "makeup": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 24
+          }
+        },
+        "additionalProperties": false
+      },
+      "autofilter": {
+        "type": "object",
+        "properties": {
+          "sync": {
+            "enum": [
+              0,
+              4,
+              2,
+              1,
+              0.5,
+              0.25
+            ],
+            "description": "Beats per cycle when following the tempo; 0 uses rate."
+          },
+          "rate": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 20
+          },
+          "depth": {
+            "$ref": "#/$defs/unit"
+          },
+          "baseFrequency": {
+            "type": "number",
+            "minimum": 20,
+            "maximum": 2000
+          },
+          "octaves": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 6
+          },
+          "resonance": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 15
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "chorus": {
+        "type": "object",
+        "properties": {
+          "rate": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 10
+          },
+          "depth": {
+            "$ref": "#/$defs/unit"
+          },
+          "delayTime": {
+            "type": "number",
+            "minimum": 2,
+            "maximum": 20
+          },
+          "spread": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 180
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "phaser": {
+        "type": "object",
+        "properties": {
+          "sync": {
+            "enum": [
+              0,
+              4,
+              2,
+              1,
+              0.5,
+              0.25
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 10
+          },
+          "octaves": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "baseFrequency": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 2000
+          },
+          "resonance": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "bitcrusher": {
+        "type": "object",
+        "properties": {
+          "bits": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "wet": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      },
+      "gate": {
+        "type": "object",
+        "properties": {
+          "threshold": {
+            "type": "number",
+            "minimum": -100,
+            "maximum": 0
+          },
+          "smoothing": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 0.5
+          }
+        },
+        "additionalProperties": false
+      },
+      "width": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "$ref": "#/$defs/unit"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sidechain": {
+      "type": "object",
+      "required": [
+        "source"
+      ],
+      "description": "Duck this track on the notes of another MIDI track.",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "The name of another MIDI track in this arrangement."
+        },
+        "lanes": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "$ref": "#/$defs/noteName"
+          },
+          "description": "Only these notes of the source trigger the duck, e.g. [\"C2\"] for the kick lane."
+        },
+        "depth": {
+          "$ref": "#/$defs/unit"
+        },
+        "attack": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 0.5
+        },
+        "release": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "automation": {
+      "type": "object",
+      "description": "Breakpoints per parameter. t is in timeline units, v in the parameter's own units, c is how the segment after the point moves.",
+      "propertyNames": {
+        "enum": [
+          "volume",
+          "pan",
+          "cutoff",
+          "resonance",
+          "lfoDepth",
+          "reverbWet",
+          "delayWet"
+        ]
+      },
+      "additionalProperties": {
+        "type": "array",
+        "maxItems": 2000,
+        "items": {
+          "type": "object",
+          "required": [
+            "t",
+            "v"
+          ],
+          "properties": {
+            "t": {
+              "$ref": "#/$defs/time"
+            },
+            "v": {
+              "type": "number"
+            },
+            "c": {
+              "enum": [
+                "linear",
+                "hold"
+              ],
+              "default": "linear"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "master": {
+      "type": "object",
+      "properties": {
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 1
+        },
+        "limiter": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "ceiling": {
+              "type": "number",
+              "minimum": -12,
+              "maximum": 0,
+              "default": -1
+            }
+          },
+          "additionalProperties": false
+        },
+        "eq": {
+          "$ref": "#/$defs/eqBands",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "unevaluatedProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "return": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,19}$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "volume": {
+          "$ref": "#/$defs/unit"
+        },
+        "pan": {
+          "$ref": "#/$defs/pan"
+        },
+        "muted": {
+          "type": "boolean"
+        },
+        "effects": {
+          "$ref": "#/$defs/effects"
+        }
+      },
+      "additionalProperties": false
+    },
+    "eqBands": {
+      "type": "object",
+      "properties": {
+        "lowCut": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 500
+        },
+        "lowGain": {
+          "type": "number",
+          "minimum": -18,
+          "maximum": 6
+        },
+        "lowFreq": {
+          "type": "number",
+          "minimum": 40,
+          "maximum": 500
+        },
+        "midGain": {
+          "type": "number",
+          "minimum": -12,
+          "maximum": 12
+        },
+        "midFreq": {
+          "type": "number",
+          "minimum": 150,
+          "maximum": 6000
+        },
+        "midQ": {
+          "type": "number",
+          "minimum": 0.3,
+          "maximum": 4
+        },
+        "highGain": {
+          "type": "number",
+          "minimum": -12,
+          "maximum": 12
+        },
+        "highFreq": {
+          "type": "number",
+          "minimum": 2000,
+          "maximum": 16000
+        }
+      }
+    }
+  }
+}
